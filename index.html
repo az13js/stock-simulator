@@ -3,23 +3,13 @@
     <meta charset="UTF-8">
 </head>
 <body>
-    <h1>维纳过程</h1>
-    <p>维纳过程如下图所示，刷新页面可以重新生成。<br><canvas id="wiener_process" width="800" height="400"><canvas></p>
-    <p>生成方式：</p>
-<pre>
-function normalDistribution(mean, standardDeviation) {
-    // Box-Muller
-    let U1 = 1 - Math.random();
-    let U2 = 1 - Math.random();
-    let R = Math.sqrt(-2 * Math.log(U2));
-    let THETA = 2 * Math.PI * U1;
-    let Z = R * Math.cos(THETA);
-    return mean + (Z * standardDeviation);
-}
-function wienerProcess(x, mean, standardDeviation) {
-    return x + normalDistribution(mean, standardDeviation);
-}
-</pre>
+    <h1>炒股模拟器</h1>
+    <div>
+        <p>资本：<span id="value">1000</span></p>
+        <button id="buysell" onclick="buyOrSell()">买入</button>
+        <p>买入价格：<span id="buyprice"></span><br>卖出价格：<span id="sellprice"></span><br>实时价格：<span id="price"></span></p>
+    </div>
+    <p><canvas id="wiener_process" width="800" height="300"><canvas></p>
     <script>
         function normalDistribution(mean, standardDeviation) {
             // Box-Muller
@@ -33,13 +23,12 @@ function wienerProcess(x, mean, standardDeviation) {
         function wienerProcess(x, mean, standardDeviation) {
             return x + normalDistribution(mean, standardDeviation);
         }
-        function draw(context2d, width, height, arrayDraw) {
+        function draw(element, context2d, width, height, arrayDraw) {
             let dx = width / arrayDraw.length;
             let max = Math.max(...arrayDraw);
             let min = Math.min(...arrayDraw);
             let hei = max - min;
-            context2d.fillStyle = "#FFFFFF";
-            context2d.fillRect(0, 0, width, height);
+            element.width = element.width;
             context2d.lineWidth = 2;
             context2d.strokeStyle = "black";
             for (let i in arrayDraw) {
@@ -52,11 +41,53 @@ function wienerProcess(x, mean, standardDeviation) {
             context2d.stroke();
         }
 
-        let sequence = [0];
-        for (let i = 1; i < 400; i++) {
+        let points = 400; // 屏幕保持有多少个点
+        var delayTime = 100; // 延迟多少毫秒
+        var generate = 1; // 每次增量生成的数量
+
+        var sequence = [250]; // 初始价格
+        for (let i = 1; i < points; i++) { 
             sequence[i] = wienerProcess(sequence[i - 1], 0, 1);
         }
-        draw(document.getElementById("wiener_process").getContext("2d"), 800, 400, sequence);
+        var element = document.getElementById("wiener_process");
+        var context2d = element.getContext("2d");
+        var buyPriceElement = document.getElementById("buyprice");
+        var sellPriceElement = document.getElementById("sellprice");
+        var priceElement = document.getElementById("price");
+        var valueElement = document.getElementById("value");
+        var button = document.getElementById("buysell");
+
+        priceElement.innerText = sequence[sequence.length - 1].toFixed(2);
+
+        function delayIncr() {
+            let len = sequence.length;
+            for (let i = 0; i < generate; i++) {
+                sequence[len] = wienerProcess(sequence[len - 1], 0, 1);
+                sequence.shift();
+            }
+            draw(element, context2d, 800, 300, sequence);
+            priceElement.innerText = sequence[len - 1].toFixed(2);
+            setTimeout(delayIncr, delayTime);
+        }
+
+        draw(element, context2d, 800, 300, sequence);
+        setTimeout(delayIncr, delayTime);
+        
+        function buyOrSell() {
+            const BUY_TEXT = "买入";
+            const SELL_TEXT = "卖出";
+            if (button.innerText == BUY_TEXT) {
+                buyPriceElement.innerText = priceElement.innerText;
+                sellPriceElement.innerText = "";
+                valueElement.innerText -= priceElement.innerText;
+                button.innerText = SELL_TEXT;
+            } else {
+                let price = priceElement.innerText;
+                sellPriceElement.innerText = price;
+                valueElement.innerText = (parseFloat(price) + parseFloat(valueElement.innerText)).toFixed(2);
+                button.innerText = BUY_TEXT;
+            }
+        }
     </script>
 </body>
 <html>
